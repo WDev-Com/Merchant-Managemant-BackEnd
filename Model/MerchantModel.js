@@ -7,6 +7,7 @@ const merchantSchema = new mongoose.Schema({
   },
   username: {
     required: true,
+    unique: true,
     type: String,
   },
   category: {

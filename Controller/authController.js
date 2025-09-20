@@ -2,23 +2,29 @@ const User = require("../Model/Auth");
 const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
 const { generateToken } = require("../JWT/jwt");
+const Merchant = require("../Model/MerchantModel");
 
 // Signup function to register a new user
 exports.signup = async (req, res) => {
   try {
-    const { username, password, role } = req.body;
+    const { username, password } = req.body;
 
-    // Check if the user already exists
+    // Check if the username exists in the Merchant database
+    const existingMerchant = await Merchant.findOne({ username });
+    if (!existingMerchant) {
+      return res.status(403).json({ error: "You are unauthorized user" });
+    }
+
+    // Check if the user already exists in the User database
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({ error: "User already exists" });
     }
-    // const salt = await bcrypt.genSalt(10);
+
     // Create a new user
     const newUser = new User({
       username,
       password,
-      role,
     });
 
     // Save the new user to the database
@@ -30,9 +36,11 @@ exports.signup = async (req, res) => {
       role: savedUser.role,
       username: savedUser.username,
     });
-    console.log("Line No 33 SignUp SuccessFully : ", savedUser.username);
+
+    console.log("Line No 33 SignUp Successfully:", savedUser.username);
     res.status(201).json({ message: "Signup successful", token });
   } catch (error) {
+    console.log(error.message);
     console.log("Signup Error: ", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
@@ -62,7 +70,11 @@ exports.login = async (req, res) => {
       username: user.username,
     });
     console.log("Line No 64 Login SuccessFully : ", user.username);
-    res.status(200).json({ message: "Login successful", token });
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      userInfo: { username: user.username, role: user.role },
+    });
   } catch (error) {
     console.log("Login Error: ", error);
     res.status(500).json({ error: "Internal Server Error" });

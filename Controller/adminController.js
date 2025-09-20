@@ -2,24 +2,37 @@ const Merchant = require("../Model/MerchantModel");
 const Bids = require("../Model/AssetModel");
 const MyBidModel = require("../Model/MyBidModel");
 const mongoose = require("mongoose");
-// Add a new merchant to the database
+// Add a new merchant to the database ##DONE
 exports.addNewMerchant = async (req, res) => {
   try {
-    const merchantData = req.body;
-    const newMerchant = new Merchant(merchantData);
+    const { username, email } = req.body;
+
+    // Check if a merchant with the same username or email already exists
+    const existingMerchant = await Merchant.findOne({
+      $or: [{ username }, { email }],
+    });
+
+    if (existingMerchant) {
+      return res.status(400).json({
+        error: "Username or Email already exists",
+      });
+    }
+
+    const newMerchant = new Merchant(req.body);
     await newMerchant.save();
     console.log("Line No 11 : Merchant Save Successfully : ", newMerchant._id);
     res
       .status(201)
       .json({ message: "Merchant added successfully", newMerchant });
   } catch (error) {
-    if (error.code === 11000 && error.keyPattern.email) {
-      return res.status(400).json({ message: "Email already exists" });
-    }
-    res.status(500).json({ message: "Error adding merchant", error });
+    console.log(error);
+    res.status(500).json({
+      error:
+        "Internal Server Error. Please input valid data as per instructions.",
+    });
   }
 };
-// Add a new bid (asset) to the database
+// Add a new bid (asset) to the database ##DONE
 exports.addNewBid = async (req, res) => {
   try {
     const bidData = req.body;
@@ -29,11 +42,12 @@ exports.addNewBid = async (req, res) => {
     console.log("Line no 28 Bids Save Successfully : ", newBid._id);
     res.status(201).json({ message: "Bid added successfully", newBid });
   } catch (error) {
-    res.status(500).json({ message: "Error adding bid", error });
+    console.log(error);
+    res.status(500).json({ error: "Error adding bid Input as instruction" });
   }
 };
 
-// Remove a merchant by ID
+// Remove a merchant by ID ##DONE
 exports.removeMerchant = async (req, res) => {
   try {
     const { id } = req.params;
@@ -53,7 +67,7 @@ exports.removeMerchant = async (req, res) => {
   }
 };
 
-// Remove a bid from the database by ID
+// Remove a bid from the database by ID ##DONE
 exports.removeBidFromDB = async (req, res) => {
   try {
     const { id } = req.params;
@@ -73,7 +87,7 @@ exports.removeBidFromDB = async (req, res) => {
   }
 };
 
-// Update a merchant by ID
+// Update a merchant by ID ##DONE
 exports.updateMerchant = async (req, res) => {
   try {
     const { id } = req.params;
@@ -124,15 +138,18 @@ exports.updateBid = async (req, res) => {
   }
 };
 
-// Get a paginated list of merchants
+// Get a paginated list of merchants ##DONE
 exports.getMerchantByPage = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
     // console.log("Page: ", page, "Limit: ", limit); // Log for debugging
-
+    // Count total number of merchants
+    const totalCount = await Merchant.countDocuments();
     const merchants = await Merchant.find()
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
+    console.log(totalCount);
+    res.set("X-Total-Merchant-Count", totalCount);
 
     res.status(200).json(merchants);
   } catch (error) {
@@ -141,7 +158,7 @@ exports.getMerchantByPage = async (req, res) => {
   }
 };
 
-// Get a specific merchant by ID
+// Get a specific merchant by ID ##DONE
 exports.getMerchantById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -181,13 +198,16 @@ exports.getBidsById = async (req, res) => {
   }
 };
 
-// Get all bids
+// Get all bids ##DONE
 exports.getAllBids = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
+    const totalCount = await Merchant.countDocuments();
+
     const merchants = await Bids.find()
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
+    res.set("X-Total-Bids-Count", totalCount);
     res.status(200).json(merchants);
   } catch (error) {
     res.status(500).json({ message: "Error retrieving bids", error });
@@ -231,6 +251,6 @@ exports.updateBidStatus = async (req, res) => {
     });
   } catch (error) {
     // Handle any server-side errors
-    res.status(500).json({ message: "Error updating bid status", error });
+    res.status(500).json({ error: "Error updating bid status" });
   }
 };

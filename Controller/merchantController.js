@@ -1,3 +1,4 @@
+const { console } = require("inspector");
 const Merchant = require("../Model/MerchantModel");
 const MyBidModel = require("../Model/MyBidModel");
 const mongoose = require("mongoose");
@@ -42,6 +43,8 @@ exports.getProfile = async (req, res) => {
 
 // Confirm a bid by updating its status
 exports.confirmBid = async (req, res) => {
+  console.log("Entering confirmBid function");
+
   try {
     // Extracting data from the request body
     const {
@@ -52,8 +55,21 @@ exports.confirmBid = async (req, res) => {
       holdingPeriod,
       ask,
       bid,
+      assetName,
     } = req.body;
-    console.log(req.body);
+
+    // Log the incoming data for debugging
+    console.log("Received data:", req.body);
+
+    // Check for existing bid
+    const existingBid = await MyBidModel.findOne({ merchantId, bidId });
+    if (existingBid) {
+      console.log("Bid with this merchantId and bidId already exists");
+      return res
+        .status(400)
+        .json({ error: "Bid with this merchantId and bidId already exists" });
+    }
+
     // Validate required fields
     if (
       !merchantId ||
@@ -62,14 +78,17 @@ exports.confirmBid = async (req, res) => {
       yearlyReturn == null ||
       holdingPeriod == null ||
       ask == null ||
-      !bid
+      !bid ||
+      !assetName
     ) {
-      return res.status(400).json({ message: "All fields are required" });
+      console.log("All fields are required");
+      return res.status(400).json({ error: "All fields are required" });
     }
 
     // Create a new bid entry
     const newBid = new MyBidModel({
       merchantId,
+      assetName,
       bidId,
       assetType,
       yearlyReturn,
@@ -80,14 +99,16 @@ exports.confirmBid = async (req, res) => {
 
     // Save the new bid document in the database
     await newBid.save();
+    console.log("Bid Confirmed and stored successfully");
 
     // Respond with success message
-    res.status(201).json({
+    return res.status(201).json({
       message: "Bid confirmed and stored successfully",
       newBid,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error confirming bid", error });
+    console.error("Error occurred while confirming bid:", error);
+    return res.status(500).json({ error: "Internal Server Error", error });
   }
 };
 

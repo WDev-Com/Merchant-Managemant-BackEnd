@@ -10,6 +10,10 @@ const myBidSchema = new mongoose.Schema({
     required: true,
     type: String,
   },
+  assetName: {
+    required: true,
+    type: String,
+  },
   assetType: {
     required: true,
     type: String,
